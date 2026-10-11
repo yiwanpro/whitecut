@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="白底工坊 WhiteCut — 批量抠图、背景留白、矢量化工作台。本地AI抠图 / Gemini 精修 / 即梦工作流承接，全程浏览器端完成。">
+<title>白底工坊 WhiteCut — 抠图 · 背景留白 · 矢量化工作台</title>
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%234f46e5"/><circle cx="26" cy="34" r="15" fill="white"/><circle cx="45" cy="22" r="8" fill="%23a5b4fc"/></svg>'>
+<style>
+:root{
+  --bg:#f5f6f8; --card:#ffffff; --ink:#1a1d21; --muted:#6b7280; --line:#e5e7eb;
+  --accent:#4f46e5; --accent-weak:#eef2ff; --ok:#16a34a; --warn:#d97706; --err:#dc2626;
+  --radius:14px; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 12px rgba(16,24,40,.06);
+}
+*{box-sizing:border-box} html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px 96px}
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 0 10px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px}
+.brand svg{width:26px;height:26px;flex:none}
+.brand small{font-weight:500;color:var(--muted);font-size:12px;margin-left:2px}
+.ghost{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:8px 14px;font-size:14px;cursor:pointer}
+.ghost:hover{border-color:#c7cdd6;background:#fafafa}
+.hero{padding:10px 0 18px}
+.hero h1{font-size:26px;margin:6px 0 8px;letter-spacing:.5px}
+.hero p{color:var(--muted);margin:0;font-size:14.5px}
+#dropzone{border:2px dashed #c7cdd6;border-radius:16px;background:#fff;padding:34px 18px;text-align:center;cursor:pointer;transition:.15s;outline:none}
+#dropzone:hover,#dropzone.drag{border-color:var(--accent);background:var(--accent-weak)}
+.dz-ico{font-size:34px;line-height:1}
+.dz-t{font-weight:600;margin:8px 0 4px}
+.dz-s{color:var(--muted);font-size:13px}
+.dz-samples{margin-top:12px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.mini{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 13px;font-size:12.5px;color:var(--ink);cursor:pointer}
+.mini:hover{border-color:var(--accent);color:var(--accent)}
+.panel{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-top:16px}
+.panel-title{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:1px;margin:0 0 10px}
+.engines{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.engine-card{position:relative;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;background:#fff;transition:.12s;display:block}
+.engine-card:hover{border-color:#b6bce8}
+.engine-card input{position:absolute;opacity:0;pointer-events:none}
+.engine-card.on{border-color:var(--accent);background:var(--accent-weak);box-shadow:inset 0 0 0 1px var(--accent)}
+.e-name{font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:6px}
+.e-tag{font-size:11px;border-radius:999px;padding:1px 8px;background:#ecfdf5;color:var(--ok);font-weight:600}
+.e-tag.pay{background:#fffbeb;color:var(--warn)}
+.e-tag.in{background:#eef2ff;color:var(--accent)}
+.e-desc{color:var(--muted);font-size:12.5px;margin-top:3px;line-height:1.5}
+.params{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
+.params summary{cursor:pointer;font-size:13.5px;color:var(--muted);user-select:none;list-style:none;display:flex;align-items:center;gap:6px}
+.params summary::before{content:"▸";transition:.15s;display:inline-block}
+.params[open] summary::before{transform:rotate(90deg)}
+.params-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 18px;margin-top:10px}
+.p-item label{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted)}
+.p-item b{color:var(--ink);font-variant-numeric:tabular-nums}
+.p-item input[type=range]{width:100%;accent-color:var(--accent)}
+.checks{display:flex;gap:16px;align-items:center;margin-top:10px;flex-wrap:wrap;font-size:13.5px}
+.checks label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.checks input{accent-color:var(--accent)}
+select{border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13.5px;background:#fff;color:var(--ink)}
+.action-row{display:flex;align-items:center;gap:14px;margin-top:14px;flex-wrap:wrap}
+.btn{border:0;border-radius:10px;padding:10px 20px;font-size:14.5px;cursor:pointer;font-weight:600}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary:hover{background:#4338ca}
+.btn.primary:disabled{opacity:.55;cursor:not-allowed}
+.btn.small{padding:6px 12px;font-size:13px;border-radius:8px}
+.btn.danger{background:#fee2e2;color:var(--err)}
+.hint{color:var(--muted);font-size:13px}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;margin-top:16px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;cursor:pointer;position:relative}
+.thumb{aspect-ratio:4/3;background:repeating-conic-gradient(#eceef1 0 25%,#fff 0 50%) 0 0/18px 18px;display:flex;align-items:center;justify-content:center;position:relative}
+.thumb img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.spin{width:26px;height:26px;border:3px solid #e0e2e8;border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.card-body{padding:10px 12px 12px}
+.card-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-meta{display:flex;align-items:center;gap:8px;margin-top:5px}
+.chip{font-size:11px;font-weight:600;border-radius:999px;padding:2px 9px}
+.chip.added{background:#f1f2f4;color:var(--muted)}
+.chip.processing{background:#fef3c7;color:var(--warn)}
+.chip.done{background:#dcfce7;color:var(--ok)}
+.chip.error{background:#fee2e2;color:var(--err)}
+.stage{font-size:11.5px;color:var(--muted);margin-top:4px;min-height:16px}
+.err-txt{font-size:11.5px;color:var(--err);margin-top:4px;word-break:break-all;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.card-ops{position:absolute;top:8px;right:8px;display:flex;gap:6px;opacity:0;transition:.15s}
+.card:hover .card-ops{opacity:1}
+.icon-btn{width:28px;height:28px;border-radius:8px;border:0;background:rgba(255,255,255,.92);box-shadow:0 1px 4px rgba(0,0,0,.15);cursor:pointer;font-size:13px;line-height:1;color:var(--ink)}
+.icon-btn:hover{background:#fff;color:var(--accent)}
+.empty{color:var(--muted);text-align:center;padding:40px 0;font-size:14px}
+.batchbar{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:#111827;color:#fff;border-radius:999px;padding:10px 10px 10px 20px;display:flex;gap:14px;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.25);z-index:50}
+.batchbar .btn{background:var(--accent)}
+.batchbar .btn:hover{background:#4338ca}
+.batchinfo{font-size:13px;color:#d1d5db}
+.hidden{display:none!important}
+.modal{position:fixed;inset:0;background:rgba(15,18,25,.5);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
+.dialog{background:#fff;border-radius:16px;max-width:980px;width:100%;max-height:92vh;overflow:auto;padding:20px 22px}
+.dialog.small{max-width:640px}
+.dlg-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.dlg-head h3{margin:0;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80%}
+.x{border:0;background:#f1f2f4;width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:15px}
+.x:hover{background:#e5e7eb}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cmp-box{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:repeating-conic-gradient(#eceef1 0 25%,#fff 0 50%) 0 0/16px 16px;position:relative;min-height:220px;display:flex;align-items:center;justify-content:center}
+.cmp-box.plainbg{background:#fff}
+.cmp-box img{max-width:100%;max-height:430px;object-fit:contain;display:block}
+.cmp-tag{position:absolute;top:8px;left:8px;font-size:11px;background:rgba(17,24,39,.75);color:#fff;border-radius:999px;padding:2px 10px;z-index:2}
+.sec{margin-top:18px;border-top:1px dashed var(--line);padding-top:14px}
+.sec h4{margin:0 0 10px;font-size:13.5px;color:var(--muted);letter-spacing:.5px}
+.dl-row{display:flex;gap:10px;flex-wrap:wrap}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:13px;font-weight:600;margin-bottom:5px}
+.field input[type=text],.field input[type=password],.field textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13.5px;font-family:inherit;color:var(--ink)}
+.field textarea{min-height:96px;resize:vertical;line-height:1.6}
+.field .note{font-size:12px;color:var(--muted);margin-top:4px}
+.key-row{display:flex;gap:8px}
+.key-row input{flex:1}
+.svgprev{border:1px solid var(--line);border-radius:10px;padding:10px;max-height:280px;overflow:auto;background:repeating-conic-gradient(#eceef1 0 25%,#fff 0 50%) 0 0/16px 16px;margin-top:10px;text-align:center}
+.svgprev svg{max-width:100%;max-height:260px}
+#toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 18px;border-radius:10px;font-size:13.5px;z-index:200;opacity:0;pointer-events:none;transition:.2s;max-width:80vw}
+#toast.show{opacity:1}
+footer{margin-top:40px;text-align:center;color:var(--muted);font-size:12.5px}
+@media (max-width:760px){
+  .engines{grid-template-columns:1fr}
+  .params-grid{grid-template-columns:1fr 1fr}
+  .compare{grid-template-columns:1fr}
+  .hero h1{font-size:21px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#4f46e5"/><circle cx="26" cy="36" r="16" fill="#fff"/><circle cx="45" cy="21" r="9" fill="#a5b4fc"/></svg>
+    白底工坊 <small>WhiteCut · 抠图 / 留白 / 矢量化</small>
+  </div>
+  <button class="ghost" id="btnSettings">⚙︎ 设置</button>
+</header>
+
+<section class="hero">
+  <h1>把任何图变成 纯白底 干净素材</h1>
+  <p>批量导入 → 抠图 → 背景留白 → 自动裁边 →（可选）矢量化导出 SVG。默认引擎在浏览器本地运行，图片不上传任何服务器。</p>
+</section>
+
+<section id="dropzone" tabindex="0" aria-label="上传图片">
+  <input id="fileInput" type="file" accept="image/*" multiple hidden>
+  <div class="dz-ico">🖼️</div>
+  <div class="dz-t">拖拽图片到这里，或点击选择</div>
+  <div class="dz-s">支持批量 · 支持 Ctrl+V 直接粘贴截图 · 图片全程不上传（Gemini 精修除外）</div>
+  <div class="dz-samples">
+    <button class="mini" id="btnSample" type="button">试试示例图</button>
+    <button class="mini" id="btnSampleWm" type="button">示例：带左上角水印的白底图（即梦场景）</button>
+  </div>
+</section>
+
+<section class="panel">
+  <p class="panel-title">① 选择处理引擎</p>
+  <div class="engines" id="engineGroup">
+    <label class="engine-card on" data-v="local">
+      <input type="radio" name="engine" value="local" checked>
+      <span class="e-name">🧩 本地 AI 抠图 <span class="e-tag">推荐 · 免费</span></span>
+      <span class="e-desc">开源模型在浏览器运行，像素级保真、无需 Key、可批量。适合绝大多数图片。</span>
+    </label>
+    <label class="engine-card" data-v="gemini">
+      <input type="radio" name="engine" value="gemini">
+      <span class="e-name">✨ Gemini 精修 <span class="e-tag pay">需 Key</span></span>
+      <span class="e-desc">调用你自己的 Gemini API 按你的提示词处理，自带「失败自动先去水印」重试链。</span>
+    </label>
+    <label class="engine-card" data-v="manual">
+      <input type="radio" name="engine" value="manual">
+      <span class="e-name">📥 手动导入 <span class="e-tag in">即梦流程</span></span>
+      <span class="e-desc">导入即梦处理好的白底图（含左上角水印也可），自动反推透明、去水印、裁边。</span>
+    </label>
+  </div>
+
+  <details class="params" open>
+    <summary>白化参数（全局默认值，可在每张图的详情里单独调整）</summary>
+    <div class="params-grid">
+      <div class="p-item"><label>背景容差 <b><span id="vTol"></span></b></label><input type="range" id="pTol" min="0" max="80" step="1"></div>
+      <div class="p-item"><label>边缘收缩 <b><span id="vErode"></span> px</b></label><input type="range" id="pErode" min="0" max="3" step="1"></div>
+      <div class="p-item"><label>边缘平滑 <b><span id="vFeather"></span> px</b></label><input type="range" id="pFeather" min="0" max="3" step="1"></div>
+      <div class="p-item"><label>强制纯白阈值 <b><span id="vPure"></span></b></label><input type="range" id="pPure" min="200" max="255" step="1"></div>
+      <div class="p-item"><label>裁边留白边距 <b><span id="vMargin"></span> %</b></label><input type="range" id="pMargin" min="0" max="20" step="1"></div>
+    </div>
+    <div class="checks">
+      <label><input type="checkbox" id="pTrim" checked> 自动裁边（紧贴主体 + 边距）</label>
+      <label><input type="checkbox" id="pSquare"> 输出正方形画布</label>
+      <span style="color:var(--muted);font-size:12.5px">强制纯白阈值 ≥ 210 才生效；容差仅对「白底图反推透明」生效（手动导入 / Gemini 白底结果）。</span>
+    </div>
+    <div class="checks">
+      <label style="gap:8px">水印策略（Gemini）：
+        <select id="wmStrategy">
+          <option value="auto">自动 — 抠图失败时先去水印再重试（推荐）</option>
+          <option value="always">总是先去水印再抠图</option>
+          <option value="off">关闭</option>
+        </select>
+      </label>
+      <span style="color:var(--muted);font-size:12.5px">手动导入模式下，若已配置 Gemini Key 且策略非「关闭」，会自动先去除即梦左上角水印再处理。</span>
+    </div>
+  </details>
+
+  <div class="action-row">
+    <button class="btn primary" id="btnProcess">🚀 开始处理</button>
+    <button class="ghost" id="btnClear">清空列表</button>
+    <span class="hint" id="engineHint"></span>
+  </div>
+</section>
+
+<section id="gallery" class="gallery"></section>
+<div id="emptyTip" class="empty">还没有图片 — 从上面拖入或点击上传</div>
+
+<footer>白底工坊 WhiteCut v1.0 · 图片默认不出浏览器 · MIT 开源</footer>
+</div>
+
+<div id="batchBar" class="batchbar hidden">
+  <span class="batchinfo" id="batchInfo"></span>
+  <button class="btn small" id="btnZip">📦 打包下载 ZIP</button>
+</div>
+<div id="toast"></div>
+
+<!-- 设置 -->
+<div class="modal hidden" id="settingsModal">
+  <div class="dialog small">
+    <div class="dlg-head"><h3>设置</h3><button class="x" id="btnSettingsClose">✕</button></div>
+    <div class="field">
+      <label>Gemini API Key（可选，用于「Gemini 精修」与自动去水印）</label>
+      <div class="key-row"><input type="password" id="sKey" placeholder="AIza..." autocomplete="off"><button class="ghost" id="sShowKey" type="button">显示</button></div>
+      <div class="note">在 aistudio.google.com → Get API key 获取；仅保存在本机浏览器（localStorage），不会上传到任何服务器。</div>
+    </div>
+    <div class="field"><label>模型名</label><input type="text" id="sModel"></div>
+    <div class="field"><label>抠图提示词模板</label><textarea id="sPromptCut" spellcheck="false"></textarea><div class="note">{动}占位无 —— 保存后立即生效，可按你的经验持续迭代。</div></div>
+    <div class="field"><label>去水印提示词模板</label><textarea id="sPromptWm" spellcheck="false"></textarea><div class="note">当图片带水印时（含即梦左上角水印），先用此提示词清理，再进入下一步。</div></div>
+    <div class="field"><label>本地模型精度（首次会下载对应模型文件）</label>
+      <select id="sLocalModel">
+        <option value="isnet_fp16">标准 fp16（默认 · 质量优先）</option>
+        <option value="isnet_quint8">轻量 quint8（约 1/3 体积 · 提速明显）</option>
+      </select>
+    </div>
+    <div class="action-row" style="justify-content:flex-end">
+      <button class="ghost" id="btnSettingsCancel">取消</button>
+      <button class="btn primary small" id="btnSettingsSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 详情 -->
+<div class="modal hidden" id="detailModal">
+  <div class="dialog">
+    <div class="dlg-head"><h3 id="dName"></h3><button class="x" id="btnCloseDetail">✕</button></div>
+    <div class="compare">
+      <div class="cmp-box plainbg"><span class="cmp-tag">原图</span><img id="dOrig" alt="原图"></div>
+      <div class="cmp-box" id="dResultBox"><span class="cmp-tag" id="dResultTag">结果 · 白底</span><img id="dResult" alt="结果"></div>
+    </div>
+    <div class="dl-row" style="margin-top:14px">
+      <button class="btn primary small" id="btnDlWhite">⬇︎ 白底 PNG</button>
+      <button class="ghost" id="btnDlCut">⬇︎ 透明 PNG</button>
+      <button class="ghost" id="btnDlJpg">⬇︎ 白底 JPG</button>
+      <button class="ghost" id="btnDlOrig">⬇︎ 原图</button>
+      <button class="ghost" id="btnBgToggle">切换：白底 ⇄ 透明</button>
+    </div>
+
+    <div class="sec">
+      <h4>白化参数（本图）</h4>
+      <div class="params-grid">
+        <div class="p-item"><label>背景容差 <b><span id="dvTol"></span></b></label><input type="range" id="dTol" min="0" max="80" step="1"></div>
+        <div class="p-item"><label>边缘收缩 <b><span id="dvErode"></span> px</b></label><input type="range" id="dErode" min="0" max="3" step="1"></div>
+        <div class="p-item"><label>边缘平滑 <b><span id="dvFeather"></span> px</b></label><input type="range" id="dFeather" min="0" max="3" step="1"></div>
+        <div class="p-item"><label>强制纯白阈值 <b><span id="dvPure"></span></b></label><input type="range" id="dPure" min="200" max="255" step="1"></div>
+        <div class="p-item"><label>裁边留白边距 <b><span id="dvMargin"></span> %</b></label><input type="range" id="dMargin" min="0" max="20" step="1"></div>
+      </div>
+      <div class="checks">
+        <label><input type="checkbox" id="dTrim"> 自动裁边</label>
+        <label><input type="checkbox" id="dSquare"> 正方形画布</label>
+      </div>
+      <div class="dl-row" style="margin-top:12px">
+        <button class="btn primary small" id="btnRerun">↻ 按此参数重新白化</button>
+        <button class="ghost" id="btnDefaults">存为全局默认</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h4>去除水印（Gemini，针对主体上残留的水印）</h4>
+      <div class="dl-row">
+        <button class="btn primary small" id="btnWmFix">🧽 用 Gemini 去除本图水印</button>
+        <span class="hint">适合：抠图后主体上仍残留水印 / 即梦左上角水印。需要已配置 Key。</span>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h4>矢量化 → SVG</h4>
+      <div class="dl-row" style="align-items:center">
+        <label style="font-size:13px">模式：
+          <select id="dSvgMode"><option value="mono">单色 / 线稿</option><option value="color">彩色插画</option></select>
+        </label>
+        <label style="font-size:13px">细节：<input type="range" id="dSvgDetail" min="1" max="5" step="1" value="3"> <b id="dvSvgDetail">3</b></label>
+        <button class="btn primary small" id="btnSvg">生成 SVG</button>
+        <button class="ghost small hidden" id="btnSvgDl">⬇︎ 下载 SVG</button>
+      </div>
+      <div class="svgprev hidden" id="dSvgPreview"></div>
+      <div class="note" style="font-size:12px;color:var(--muted);margin-top:6px">基于结果图的采样进行描迹（最长边 1200px 内）。单色模式含阈值二值化；复杂照片建议先用彩色模式再手工精修。</div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ================= 白底工坊 WhiteCut =================
+   流水线：导入 → [引擎] 抠图 → 白化(反推alpha/收缩/羽化/纯白/裁边) → 导出 PNG/JPG/SVG/ZIP
+   引擎：local(@imgly 浏览器本地) | gemini(用户Key直连) | manual(即梦白底图)
+====================================================== */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+
+const CDN = {
+  imagetracer: 'https://cdn.jsdelivr.net/npm/imagetracerjs@1.2.6/imagetracer_v1.2.6.js',
+  jszip: 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+};
+const IMLY_URLS = [
+  'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/browser.mjs',
+  'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm',
+];
+const LS_KEY = 'whitecut.settings.v1';
+
+const DEFAULT_PROMPT_CUT = `将这张图片中的主体完整抠出，并放在纯白色(#FFFFFF)背景上。要求：
+1) 只保留主体，彻底移除原背景、投影和倒影；
+2) 边缘干净锐利，不得有背景色残留或白色光晕；
+3) 主体的形状、比例、颜色、文字与细节必须与原图完全一致，不得重绘、美化或增删内容；
+4) 输出图片尺寸与原图一致。`;
+
+const DEFAULT_PROMPT_WM = `移除这张图片上所有的水印、logo、角标和文字覆盖（包括左上角的"即梦 AI生成"水印），除此之外图片的其他任何部分（内容、颜色、构图、细节）保持与原图完全一致，不得重绘或改动水印以外的区域。`;
+
+const DEFAULTS = {
+  geminiKey: '', geminiModel: 'gemini-2.5-flash-image',
+  promptCut: DEFAULT_PROMPT_CUT, promptWm: DEFAULT_PROMPT_WM,
+  tol: 24, erode: 1, feather: 1, pure: 248, margin: 4, trim: true, square: false,
+  wmStrategy: 'auto', localModel: 'isnet_fp16',
+};
+let settings = loadSettings();
+const MAX_SIDE = 2560;        // 处理用最大边
+const VECTOR_MAX_SIDE = 1200; // 矢量化采样最大边
+
+/* ---------- 状态 ---------- */
+const state = { items: [], busy: false };
+let uidSeq = 0;
+/* item: {id,name,srcURL,srcBlob,srcCappedBlob,srcBitmap,srcThumb,
+          cutBlob,whiteBlob,cutTransBlob,params,svgText,status,stage,error} */
+
+function loadSettings() {
+  try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(LS_KEY) || '{}') }; }
+  catch { return { ...DEFAULTS }; }
+}
+function saveSettings() { try { localStorage.setItem(LS_KEY, JSON.stringify(settings)); } catch {} }
+
+/* ---------- 基础工具 ---------- */
+function mkCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function esc(s) { return String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])); }
+function fmtKB(n) { return n > 1024 * 1024 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+
+let toastTimer;
+function toast(msg, ms = 3200) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    if ([...document.scripts].some(s => s.src === src)) return res();
+    const s = document.createElement('script');
+    s.src = src; s.onload = () => res(); s.onerror = () => rej(new Error('脚本加载失败: ' + src));
+    document.head.appendChild(s);
+  });
+}
+
+/* ---------- 图像工具 ---------- */
+async function blobToBitmap(blob) {
+  try { return await createImageBitmap(blob); }
+  catch (e) {
+    const url = URL.createObjectURL(blob);
+    try {
+      const img = new Image(); img.src = url;
+      await img.decode();
+      return await createImageBitmap(img);
+    } finally { URL.revokeObjectURL(url); }
+  }
+}
+function bitmapToCanvas(bmp) {
+  const c = mkCanvas(bmp.width, bmp.height);
+  c.getContext('2d').drawImage(bmp, 0, 0);
+  return c;
+}
+function canvasToBlob(canvas, type = 'image/png', q) {
+  return new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob 失败')), type, q));
+}
+function capBitmap(bmp, maxSide) {
+  const ms = Math.max(bmp.width, bmp.height);
+  if (ms <= maxSide) return bmp;
+  const k = maxSide / ms;
+  const c = mkCanvas(Math.round(bmp.width * k), Math.round(bmp.height * k));
+  const ctx = c.getContext('2d'); ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  return c;
+}
+async function capToBlob(bmp, maxSide = MAX_SIDE, type = 'image/png') {
+  const c = bitmapToCanvas(capBitmap(bmp, maxSide));
+  return await canvasToBlob(c, type);
+}
+function makeThumb(source, max = 340, type = 'image/jpeg') {
+  const c = mkCanvas(source.width, source.height);
+  c.getContext('2d').drawImage(source, 0, 0);
+  const t = mkCanvasFromScaled(c, max);
+  return t.toDataURL(type, 0.86);
+}
+function mkCanvasFromScaled(srcCanvas, max) {
+  const ms = Math.max(srcCanvas.width, srcCanvas.height);
+  const k = Math.min(1, max / ms);
+  const t = mkCanvas(Math.max(1, Math.round(srcCanvas.width * k)), Math.max(1, Math.round(srcCanvas.height * k)));
+  const ctx = t.getContext('2d'); ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(srcCanvas, 0, 0, t.width, t.height);
+  return t;
+}
+function dataURLToBlob(u) {
+  const [meta, b64] = u.split(',');
+  const mime = (meta.match(/:(.*?);/) || [])[1] || 'image/png';
+  const bin = atob(b64); const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+function b64ToBlob(b64, mime = 'image/png') {
+  const bin = atob(b64); const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+async function blobToB64(blob, maxSide = 1600, type = 'image/jpeg', q = 0.92) {
+  const bmp = await blobToBitmap(blob);
+  const c = bitmapToCanvas(capBitmap(bmp, maxSide));
+  return c.toDataURL(type, q).split(',')[1];
+}
+function downloadBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 6000);
+}
+const baseName = n => n.replace(/\.[^.]+$/, '') || 'image';
+
+/* ---------- 像素算法 ---------- */
+function bitmapHasAlpha(bmp) {
+  const c = bitmapToCanvas(bmp);
+  const d = c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, c.width, c.height).data;
+  for (let i = 3; i < d.length; i += 4) if (d[i] < 250) return true;
+  return false;
+}
+/* 从白底图反推 alpha：从四条边做 BFS，连通的「近白低饱和」像素视为背景 */
+function floodFillAlpha(imgData, tol) {
+  const d = imgData.data, w = imgData.width, h = imgData.height, n = w * h;
+  const satMax = Math.max(30, Math.round(tol * 1.5));
+  const near = new Uint8Array(n);
+  for (let p = 0; p < n; p++) {
+    const i = p * 4, r = d[i], g = d[i + 1], b = d[i + 2];
+    const mn = Math.min(r, g, b), mx = Math.max(r, g, b);
+    near[p] = ((255 - mn) <= tol && (mx - mn) <= satMax) ? 1 : 0;
+  }
+  const bg = new Uint8Array(n), q = new Int32Array(n);
+  let qh = 0, qt = 0;
+  const push = p => { if (!bg[p] && near[p]) { bg[p] = 1; q[qt++] = p; } };
+  for (let x = 0; x < w; x++) { push(x); push((h - 1) * w + x); }
+  for (let y = 0; y < h; y++) { push(y * w); push(y * w + w - 1); }
+  while (qh < qt) {
+    const p = q[qh++], x = p % w, y = (p / w) | 0;
+    if (x > 0) push(p - 1);
+    if (x < w - 1) push(p + 1);
+    if (y > 0) push(p - w);
+    if (y < h - 1) push(p + w);
+  }
+  const alpha = new Uint8ClampedArray(n);
+  for (let p = 0; p < n; p++) alpha[p] = bg[p] ? 0 : 255;
+  return alpha;
+}
+function erodeAlpha(alpha, w, h, r) {
+  if (r <= 0) return alpha;
+  const tmp = new Uint8ClampedArray(w * h);
+  for (let y = 0; y < h; y++) {
+    const o = y * w;
+    for (let x = 0; x < w; x++) {
+      let m = 255;
+      for (let k = -r; k <= r; k++) { const xx = x + k; if (xx >= 0 && xx < w) { const v = alpha[o + xx]; if (v < m) m = v; } }
+      tmp[o + x] = m;
+    }
+  }
+  const out = new Uint8ClampedArray(w * h);
+  for (let x = 0; x < w; x++) for (let y = 0; y < h; y++) {
+    let m = 255;
+    for (let k = -r; k <= r; k++) { const yy = y + k; if (yy >= 0 && yy < h) { const v = tmp[yy * w + x]; if (v < m) m = v; } }
+    out[y * w + x] = m;
+  }
+  return out;
+}
+function blurAlpha(alpha, w, h, r) {
+  if (r <= 0) return alpha;
+  const win = 2 * r + 1, tmp = new Uint8ClampedArray(w * h), out = new Uint8ClampedArray(w * h);
+  for (let y = 0; y < h; y++) {
+    const o = y * w; let sum = 0;
+    for (let k = -r; k <= r; k++) sum += alpha[o + Math.min(w - 1, Math.max(0, k))];
+    for (let x = 0; x < w; x++) {
+      tmp[o + x] = Math.round(sum / win);
+      sum += alpha[o + Math.min(w - 1, x + r + 1)] - alpha[o + Math.max(0, x - r)];
+    }
+  }
+  for (let x = 0; x < w; x++) {
+    let sum = 0;
+    for (let k = -r; k <= r; k++) sum += tmp[Math.min(h - 1, Math.max(0, k)) * w + x];
+    for (let y = 0; y < h; y++) {
+      out[y * w + x] = Math.round(sum / win);
+      sum += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x];
+    }
+  }
+  return out;
+}
+function bboxOf(alpha, w, h, thr = 12) {
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++)
+    if (alpha[y * w + x] > thr) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  return x1 < 0 ? null : { x0, y0, x1, y1 };
+}
+
+/* ---------- 白化处理器 ----------
+   输入：cutBlob（带 alpha 的抠图 或 白底图）
+   输出：{ whiteBlob, cutBlob2 }  */
+async function whiten(cutBlob, p) {
+  const bmp = await blobToBitmap(cutBlob);
+  const w = bmp.width, h = bmp.height;
+  const c = mkCanvas(w, h);
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(bmp, 0, 0);
+  const img = ctx.getImageData(0, 0, w, h);
+
+  let alpha = new Uint8ClampedArray(w * h);
+  if (bitmapHasAlpha(bmp)) {
+    for (let i = 0, n = w * h; i < n; i++) alpha[i] = img.data[i * 4 + 3];
+    alpha = erodeAlpha(alpha, w, h, p.erode);
+    alpha = blurAlpha(alpha, w, h, p.feather);
+  } else {
+    alpha = floodFillAlpha(img, p.tol);
+    alpha = blurAlpha(alpha, w, h, p.feather);
+  }
+
+  // 透明版
+  const cutC = mkCanvas(w, h); const cutCtx = cutC.getContext('2d');
+  const cutImg = new ImageData(new Uint8ClampedArray(img.data), w, h);
+  for (let i = 0, n = w * h; i < n; i++) cutImg.data[i * 4 + 3] = alpha[i];
+  cutCtx.putImageData(cutImg, 0, 0);
+
+  // 白底版
+  const whiteC = mkCanvas(w, h); const wctx = whiteC.getContext('2d', { willReadFrequently: true });
+  wctx.fillStyle = '#ffffff'; wctx.fillRect(0, 0, w, h);
+  wctx.drawImage(cutC, 0, 0);
+  if (p.pure >= 210) {
+    const wi = wctx.getImageData(0, 0, w, h), dd = wi.data;
+    for (let i = 0; i < dd.length; i += 4)
+      if (dd[i] >= p.pure && dd[i + 1] >= p.pure && dd[i + 2] >= p.pure) { dd[i] = dd[i + 1] = dd[i + 2] = 255; }
+    wctx.putImageData(wi, 0, 0);
+  }
+
+  // 裁边
+  let whiteC2 = whiteC, cutC2 = cutC;
+  const bb = bboxOf(alpha, w, h);
+  if (bb && p.trim) {
+    const bw = bb.x1 - bb.x0 + 1, bh = bb.y1 - bb.y0 + 1;
+    const m = Math.round(Math.max(bw, bh) * p.margin / 100);
+    let cw, ch;
+    if (p.square) { const side = Math.max(bw, bh) + 2 * m; cw = ch = side; }
+    else { cw = bw + 2 * m; ch = bh + 2 * m; }
+    cw = Math.min(cw, w + 2 * m); ch = Math.min(ch, h + 2 * m);
+    const cx = bb.x0 + bw / 2, cy = bb.y0 + bh / 2;
+    const ox = Math.round(cx - cw / 2), oy = Math.round(cy - ch / 2);
+    whiteC2 = mkCanvas(cw, ch); const w2 = whiteC2.getContext('2d');
+    w2.fillStyle = '#ffffff'; w2.fillRect(0, 0, cw, ch);
+    w2.drawImage(whiteC, -ox, -oy);
+    cutC2 = mkCanvas(cw, ch); const c2 = cutC2.getContext('2d');
+    c2.drawImage(cutC, -ox, -oy);
+  }
+  return { whiteBlob: await canvasToBlob(whiteC2), cutBlob2: await canvasToBlob(cutC2) };
+}
+
+/* ---------- 引擎 ---------- */
+let imglyMod = null;
+async function loadImgly() {
+  if (imglyMod) return imglyMod;
+  let lastErr;
+  for (const url of IMLY_URLS) {
+    try { imglyMod = await import(url); if (imglyMod?.removeBackground) return imglyMod; }
+    catch (e) { lastErr = e; }
+  }
+  throw new Error('本地AI引擎加载失败（请检查网络或稍后重试）：' + (lastErr?.message || lastErr));
+}
+function orTimeout(p, ms, label) {
+  let timer;
+  const t = new Promise((_, rej) => { timer = setTimeout(() => rej(new Error(`${label}超时（${Math.round(ms / 1000)}s）`)), ms); });
+  p.catch(() => {}); // 被放弃的调用后续失败不再产生未处理拒绝
+  return Promise.race([p, t]).finally(() => clearTimeout(timer));
+}
+async function removeBackgroundLocal(sourceBlob, onProgress) {
+  const mod = await loadImgly();
+  const models = settings.localModel === 'isnet_quint8' ? ['isnet_quint8'] : [settings.localModel, 'isnet_quint8'];
+  let lastErr;
+  for (const model of models) {
+    try {
+      return await orTimeout(
+        mod.removeBackground(sourceBlob, {
+          model,
+          device: 'cpu', // 强制 wasm-cpu，避免个别环境 WebGPU(jsep) 偶发挂起
+          progress: (key, cur, total) => { if (total) onProgress?.(Math.round(cur / total * 100), null); },
+          output: { format: 'image/png' },
+        }),
+        150000, '本地推理'
+      );
+    } catch (e) { lastErr = e; onProgress?.(0, `标准推理异常，正在用轻量模型重试…（${String(e?.message || e).slice(0, 60)}）`); }
+  }
+  throw new Error('本地抠图失败：' + (lastErr?.message || lastErr));
+}
+
+async function geminiEdit(b64jpeg, prompt) {
+  if (!settings.geminiKey) throw new Error('未配置 Gemini API Key（右上角「设置」）');
+  let res, json;
+  try {
+    res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(settings.geminiModel)}:generateContent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': settings.geminiKey },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }, { inline_data: { mime_type: 'image/jpeg', data: b64jpeg } }] }],
+        generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+      }),
+    });
+  } catch (e) {
+    throw new Error('无法连接 Gemini（网络不可达？）：' + (e.message || e));
+  }
+  if (!res.ok) {
+    const t = await res.text(); let msg = t;
+    try { msg = JSON.parse(t).error?.message || t; } catch {}
+    throw new Error(`Gemini ${res.status}: ${String(msg).slice(0, 220)}`);
+  }
+  json = await res.json();
+  const cand = json?.candidates?.[0];
+  const parts = cand?.content?.parts || [];
+  const p = parts.find(x => x.inlineData || x.inline_data);
+  const inl = p && (p.inlineData || p.inline_data);
+  if (!inl) {
+    const fr = cand?.finishReason ? `（finishReason: ${cand.finishReason}）` : '';
+    const txt = parts.find(x => x.text)?.text || '';
+    throw new Error(`Gemini 未返回图片${fr}${txt ? '：' + String(txt).slice(0, 140) : ''}`);
+  }
+  return b64ToBlob(inl.data, inl.mime_type || inl.mimeType || 'image/png');
+}
+
+/* 手动导入时自动去水印（即梦左上角），失败不阻断 */
+async function tryRemoveWm(blob, onStage) {
+  if (settings.autoWm === 'off' || !settings.geminiKey) return blob;
+  try {
+    onStage?.('去水印（Gemini）…');
+    const b64 = await blobToB64(blob, 1600, 'image/jpeg', 0.92);
+    return await geminiEdit(b64, settings.promptWm);
+  } catch (e) {
+    console.warn('去水印失败，使用原图继续：', e);
+    toast('去水印失败（' + String(e.message || e).slice(0, 80) + '），继续用原图处理');
+    return blob;
+  }
+}
+
+async function engineLocal(item, onStage) {
+  onStage?.('加载本地模型（首次约 40MB，之后走缓存）…');
+  return await removeBackgroundLocal(item.srcCappedBlob, (pct, note) =>
+    onStage?.(note || `模型下载/推理 ${pct || 0}%…`));
+}
+
+async function engineGemini(item, onStage) {
+  if (!settings.geminiKey) throw new Error('未配置 Gemini API Key — 请点右上角「设置」填写（AI Studio 免费申请）');
+  onStage?.('准备图片…');
+  let b64 = await blobToB64(item.srcCappedBlob, 1600, 'image/jpeg', 0.92);
+  const strategy = settings.wmStrategy;
+  let cur = b64, wmOk = false, lastErr = null;
+
+  const attempt = async (label, prompt) => {
+    onStage?.(label + '（Gemini）…');
+    const blob = await geminiEdit(cur, prompt);
+    return blob;
+  };
+  const encode = async blob => { cur = await blobToB64(blob, 1600, 'image/jpeg', 0.92); };
+
+  try {
+    if (strategy === 'always') {
+      const wmBlob = await attempt('去水印', settings.promptWm); wmOk = true; await encode(wmBlob);
+    }
+    const cutBlob = await attempt('抠图留白', settings.promptCut);
+    return cutBlob;
+  } catch (e) {
+    lastErr = e;
+  }
+  if (strategy !== 'off') {
+    // 自动链：先去水印 → 再抠图 → 仍失败则本地引擎兜底 → 最后交白底原图
+    try {
+      if (!wmOk) { const wmBlob = await attempt('去水印(重试链)', settings.promptWm); wmOk = true; await encode(wmBlob); }
+      try { return await attempt('抠图留白(重试链)', settings.promptCut); } catch (e2) { /* 用本地兜底 */ }
+      try { onStage?.('本地引擎兜底…'); return await removeBackgroundLocal(dataURLToBlob('data:image/jpeg;base64,' + cur)); } catch (e3) {}
+      return dataURLToBlob('data:image/jpeg;base64,' + cur); // 白底图交给白化反推透明
+    } catch (e4) { /* fallthrough */ }
+  } else {
+    try { onStage?.('本地引擎兜底…'); return await removeBackgroundLocal(item.srcCappedBlob); } catch (e5) {}
+  }
+  throw lastErr || new Error('Gemini 处理失败');
+}
+
+async function processItem(item) {
+  item.status = 'processing'; item.error = ''; item.stage = '排队中…'; renderCard(item);
+  try {
+    let cutBlob;
+    if (state.engine === 'local') cutBlob = await engineLocal(item, s => { item.stage = s; renderCard(item); });
+    else if (state.engine === 'gemini') cutBlob = await engineGemini(item, s => { item.stage = s; renderCard(item); });
+    else cutBlob = await tryRemoveWm(item.srcCappedBlob, s => { item.stage = s; renderCard(item); });
+    item.cutBlob = cutBlob;
+    item.stage = '白化处理…'; renderCard(item);
+    const r = await whiten(cutBlob, item.params);
+    item.whiteBlob = r.whiteBlob; item.cutTransBlob = r.cutBlob2;
+    item.whiteThumb = await thumbFromBlob(r.whiteBlob);
+    item.cutThumb = await thumbFromBlob(r.cutBlob2, 'image/png');
+    item.svgText = null;
+    item.status = 'done'; item.stage = '';
+  } catch (e) {
+    item.status = 'error'; item.error = String(e?.message || e); item.stage = '';
+  }
+  renderCard(item); updateBatch();
+}
+async function thumbFromBlob(blob, type = 'image/jpeg') {
+  const bmp = await blobToBitmap(blob);
+  return makeThumb(bitmapToCanvas(capBitmap(bmp, 340)), 340, type);
+}
+async function processAll() {
+  if (state.busy) return;
+  const list = state.items.filter(i => ['added', 'error'].includes(i.status));
+  if (!list.length) { toast('没有待处理的图片'); return; }
+  state.busy = true; $('#btnProcess').disabled = true;
+  for (const it of list) await processItem(it);
+  state.busy = false; $('#btnProcess').disabled = false;
+  const ok = state.items.filter(i => i.status === 'done').length;
+  toast(`处理完成：成功 ${ok} / 失败 ${state.items.filter(i => i.status === 'error').length}`);
+}
+async function rewhiten(item, params) {
+  if (!item.cutBlob) throw new Error('该图尚未完成抠图');
+  const r = await whiten(item.cutBlob, params);
+  item.whiteBlob = r.whiteBlob; item.cutTransBlob = r.cutBlob2;
+  item.whiteThumb = await thumbFromBlob(r.whiteBlob);
+  item.cutThumb = await thumbFromBlob(r.cutBlob2, 'image/png');
+  item.svgText = null;
+}
+async function wmFix(item) {
+  if (!settings.geminiKey) { toast('未配置 Gemini API Key（右上角「设置」）'); return; }
+  if (!item.whiteBlob) { toast('请先完成抠图处理'); return; }
+  item.status = 'processing'; item.stage = '去水印（Gemini）…'; renderCard(item); updateBatch();
+  try {
+    const wmBlob = await geminiEdit(await blobToB64(item.whiteBlob, 1600, 'image/jpeg', 0.92), settings.promptWm);
+    await rewhiten(item, item.params);
+    item.status = 'done'; item.stage = '';
+  } catch (e) {
+    item.status = 'error'; item.error = String(e?.message || e); item.stage = '';
+  }
+  renderCard(item); updateBatch();
+}
+
+/* ---------- 矢量化 ---------- */
+async function ensureTracer() {
+  if (!window.ImageTracer) await loadScript(CDN.imagetracer);
+  return window.ImageTracer;
+}
+async function vectorizeItem(item, mode, detail) {
+  if (!item.whiteBlob) throw new Error('请先完成抠图留白');
+  const T = await ensureTracer();
+  const bmp = await blobToBitmap(item.whiteBlob);
+  const c = bitmapToCanvas(capBitmap(bmp, VECTOR_MAX_SIDE));
+  const imgData = c.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, c.width, c.height);
+  const fine = 1.4 - (detail - 1) * 0.27; // 5 档 → 1.4 … 0.32
+  let opts;
+  if (mode === 'mono') {
+    const thr = 150;
+    const out = new ImageData(new Uint8ClampedArray(imgData.data), imgData.width, imgData.height);
+    const d = out.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      const v = lum >= thr ? 255 : 0; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255;
+    }
+    opts = { numberofcolors: 2, colorquantcycles: 4, ltres: fine, qtres: fine, pathomit: 6, roundcoords: 1, viewbox: true, desc: false };
+    return T.imagedataToSVG(out, opts);
+  }
+  opts = { numberofcolors: Math.min(64, 6 * detail), colorquantcycles: 3, ltres: fine, qtres: fine, pathomit: 8, roundcoords: 1, viewbox: true, desc: false };
+  return T.imagedataToSVG(imgData, opts);
+}
+
+/* ---------- 导入 ---------- */
+function revokeItem(it) {
+  if (it.srcURL?.startsWith('blob:')) URL.revokeObjectURL(it.srcURL);
+}
+async function addBlobs(blobs) {
+  for (const blob of blobs) {
+    if (!blob.type?.startsWith('image/')) { toast('跳过非图片文件：' + (blob.name || '未命名')); continue; }
+    if (state.items.length >= 60) { toast('单次最多 60 张'); break; }
+    const dup = state.items.find(i => i.name === blob.name && i.size === blob.size);
+    if (dup) continue;
+    const it = {
+      id: ++uidSeq, name: blob.name || `粘贴图-${uidSeq}.png`, size: blob.size,
+      srcBlob: blob, srcURL: URL.createObjectURL(blob),
+      cutBlob: null, whiteBlob: null, cutTransBlob: null, svgText: null,
+      params: { ...settings },
+      status: 'added', stage: '', error: '',
+    };
+    try {
+      it.srcBitmap = capBitmap(await blobToBitmap(blob), MAX_SIDE);
+      it.srcCappedBlob = await capToBlob(it.srcBitmap, MAX_SIDE, 'image/png');
+      it.srcThumb = makeThumb(bitmapToCanvas(it.srcBitmap));
+      state.items.push(it); renderCard(it);
+    } catch (e) {
+      toast(`无法读取「${it.name}」：${String(e?.message || e).slice(0, 90)}（HEIC 等格式请先转 JPG/PNG）`);
+    }
+  }
+  refreshEmpty(); updateBatch();
+}
+async function addDataURL(url, name) {
+  const b = dataURLToBlob(url);
+  const f = new File([b], name || `粘贴图-${++uidSeq}.png`, { type: b.type });
+  return await addBlobs([f]);
+}
+
+/* ---------- 渲染 ---------- */
+const CHIP = { added: ['added', '待处理'], processing: ['processing', '处理中'], done: ['done', '完成'], error: ['error', '失败'] };
+function renderCard(it) {
+  let card = $(`#card-${it.id}`);
+  if (!card) {
+    card = document.createElement('div'); card.className = 'card'; card.id = `card-${it.id}`;
+    card.innerHTML = `<div class="thumb"></div><div class="card-body">
+      <div class="card-name"></div><div class="card-meta"><span class="chip"></span></div>
+      <div class="stage"></div></div>
+      <div class="card-ops"><button class="icon-btn" data-op="del" title="删除">🗑</button></div>`;
+    $('#gallery').appendChild(card);
+    card.addEventListener('click', ev => {
+      if (ev.target.closest('[data-op=del]')) return;
+      openDetail(it);
+    });
+    $('[data-op=del]', card).addEventListener('click', ev => {
+      ev.stopPropagation();
+      revokeItem(it);
+      state.items = state.items.filter(x => x !== it);
+      card.remove(); refreshEmpty(); updateBatch();
+    });
+  }
+  const thumb = $('.thumb', card);
+  const src = it.whiteThumb || it.cutThumb || it.srcThumb;
+  if (thumb.dataset.cur !== (src || '')) {
+    thumb.innerHTML = src ? `<img alt="">` : `<div class="spin"></div>`;
+    if (src) $('img', thumb).src = src;
+    thumb.dataset.cur = src || '';
+  }
+  let sp = $('.spin', thumb);
+  if (it.status === 'processing' && !sp) {
+    sp = document.createElement('div'); sp.className = 'spin';
+    sp.style.cssText = 'position:absolute';
+    thumb.appendChild(sp);
+  } else if (it.status !== 'processing' && sp) sp.remove();
+  $('.card-name', card).textContent = it.name;
+  const chip = $('.chip', card);
+  const [cls, label] = CHIP[it.status] || CHIP.added;
+  chip.className = 'chip ' + cls; chip.textContent = label;
+  $('.stage', card).textContent = it.status === 'error' ? '' : (it.stage || '');
+  let err = $('.err-txt', card);
+  if (it.status === 'error') {
+    if (!err) { err = document.createElement('div'); err.className = 'err-txt'; $('.card-body', card).appendChild(err); }
+    err.textContent = it.error;
+    card.title = it.error;
+  } else if (err) { err.remove(); card.title = ''; }
+}
+function refreshEmpty() { $('#emptyTip').classList.toggle('hidden', state.items.length > 0); }
+function updateBatch() {
+  const done = state.items.filter(i => i.status === 'done');
+  const bar = $('#batchBar');
+  bar.classList.toggle('hidden', done.length === 0);
+  $('#batchInfo').textContent = `已完成 ${done.length} 张 · 失败 ${state.items.filter(i => i.status === 'error').length} 张`;
+}
+
+/* ---------- 详情弹窗 ---------- */
+let curDetail = null;
+function bindSlider(inp, span, key, obj) {
+  inp.value = obj[key];
+  span.textContent = obj[key];
+  inp.oninput = () => { obj[key] = +inp.value; span.textContent = inp.value; };
+}
+function openDetail(it) {
+  curDetail = it;
+  if (!it.params) it.params = { ...settings };
+  $('#dName').textContent = it.name;
+  $('#dOrig').src = it.srcURL;
+  $('#dResult').src = it.whiteThumb || '';
+  $('#dResultTag').textContent = '结果 · 白底';
+  $('#dResultBox').classList.remove('plainbg');
+  const p = it.params;
+  bindSlider($('#dTol'), $('#dvTol'), 'tol', p);
+  bindSlider($('#dErode'), $('#dvErode'), 'erode', p);
+  bindSlider($('#dFeather'), $('#dvFeather'), 'feather', p);
+  bindSlider($('#dPure'), $('#dvPure'), 'pure', p);
+  bindSlider($('#dMargin'), $('#dvMargin'), 'margin', p);
+  $('#dTrim').checked = !!p.trim; $('#dSquare').checked = !!p.square;
+  $('#dSvgPreview').classList.add('hidden'); $('#btnSvgDl').classList.add('hidden');
+  $('#detailModal').classList.remove('hidden');
+}
+function closeDetail() { $('#detailModal').classList.add('hidden'); curDetail = null; }
+
+/* ---------- 设置弹窗 ---------- */
+function openSettings() {
+  $('#sKey').value = settings.geminiKey; $('#sModel').value = settings.geminiModel;
+  $('#sPromptCut').value = settings.promptCut; $('#sPromptWm').value = settings.promptWm;
+  $('#sLocalModel').value = settings.localModel || 'isnet_fp16';
+  $('#settingsModal').classList.remove('hidden');
+}
+function closeSettings() { $('#settingsModal').classList.add('hidden'); }
+
+/* ---------- 导出 ---------- */
+function dlWhite(it) { downloadBlob(it.whiteBlob, baseName(it.name) + '.white.png'); }
+function dlCut(it) { downloadBlob(it.cutTransBlob, baseName(it.name) + '.cut.png'); }
+function dlJpg(it) { downloadBlob(it.whiteBlob, baseName(it.name) + '.white.jpg'); }
+function dlSvg(it) {
+  const blob = new Blob([it.svgText], { type: 'image/svg+xml' });
+  downloadBlob(blob, baseName(it.name) + '.svg');
+}
+async function buildZip() {
+  await loadScript(CDN.jszip);
+  const zip = new window.JSZip(); const used = new Set();
+  const uniq = n => { let k = n, i = 2; while (used.has(k)) k = `${baseName(n)}-${i++}${n.slice(n.lastIndexOf('.'))}`; used.add(k); return k; };
+  for (const it of state.items.filter(i => i.status === 'done')) {
+    const b = baseName(it.name);
+    zip.file(uniq(b + '.white.png'), it.whiteBlob);
+    zip.file(uniq(b + '.cut.png'), it.cutTransBlob);
+    if (it.svgText) zip.file(uniq(b + '.svg'), it.svgText);
+  }
+  return await zip.generateAsync({ type: 'blob' });
+}
+
+/* ---------- 示例图 ---------- */
+function makeSampleDataURL(type = 'normal') {
+  const c = mkCanvas(720, 560), x = c.getContext('2d');
+  if (type === 'normal') {
+    const g = x.createLinearGradient(0, 0, 720, 560);
+    g.addColorStop(0, '#fce7f3'); g.addColorStop(1, '#ddd6fe');
+    x.fillStyle = g; x.fillRect(0, 0, 720, 560);
+  } else { x.fillStyle = '#ffffff'; x.fillRect(0, 0, 720, 560); }
+  x.fillStyle = '#ef4444'; x.beginPath(); x.ellipse(360, 235, 110, 135, 0, 0, Math.PI * 2); x.fill();
+  x.fillStyle = 'rgba(255,255,255,.35)'; x.beginPath(); x.ellipse(325, 195, 26, 40, -0.5, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#dc2626'; x.beginPath(); x.moveTo(360, 372); x.lineTo(344, 393); x.lineTo(376, 393); x.closePath(); x.fill();
+  x.strokeStyle = '#92400e'; x.lineWidth = 3; x.beginPath();
+  x.moveTo(360, 393); x.quadraticCurveTo(338, 460, 360, 522); x.stroke();
+  if (type === 'wm') {
+    x.fillStyle = 'rgba(37,99,235,.85)'; x.fillRect(18, 16, 132, 34);
+    x.fillStyle = '#fff'; x.font = 'bold 20px system-ui'; x.fillText('即梦 AI', 36, 40);
+  }
+  return c.toDataURL('image/png');
+}
+
+/* ---------- 事件绑定 ---------- */
+function bindEngine() {
+  const hint = { local: '免费 · 无需 Key · 图片不上传', gemini: settings.geminiKey ? '已配置 Key ✓' : '未配置 Key — 点右上角「设置」', manual: '白底图自动反推透明' };
+  function sync() {
+    const v = document.querySelector('input[name=engine]:checked').value;
+    state.engine = v;
+    $$('#engineGroup .engine-card').forEach(l => l.classList.toggle('on', l.dataset.v === v));
+    $('#engineHint').textContent = hint[v] + (v === 'gemini' && !settings.geminiKey ? '' : '');
+    if (v === 'gemini' && !settings.geminiKey) $('#engineHint').innerHTML = '未配置 Key — <u style="cursor:pointer" id="hintSet">点此设置</u>';
+    $('#pTol').closest('.p-item').style.opacity = v === 'local' ? .45 : 1;
+  }
+  $$('#engineGroup input[name=engine]').forEach(r => r.addEventListener('change', sync));
+  sync();
+}
+function bindParam(id, span, key) {
+  const inp = $(id), sp = $(span);
+  inp.value = settings[key]; sp.textContent = settings[key];
+  inp.addEventListener('input', () => { settings[key] = +inp.value; sp.textContent = inp.value; saveSettings(); });
+}
+function bindCheck(id, key) {
+  const el = $(id); el.checked = !!settings[key];
+  el.addEventListener('change', () => { settings[key] = el.checked; saveSettings(); });
+}
+
+function init() {
+  const dz = $('#dropzone'), fi = $('#fileInput');
+  dz.addEventListener('click', e => { if (!e.target.closest('button')) fi.click(); });
+  fi.addEventListener('change', () => { addBlobs([...fi.files]); fi.value = ''; });
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); addBlobs([...e.dataTransfer.files]); });
+  window.addEventListener('paste', e => {
+    const files = [...(e.clipboardData?.items || [])].filter(i => i.type.startsWith('image/')).map(i => i.getAsFile()).filter(Boolean);
+    if (files.length) addBlobs(files);
+  });
+  $('#btnSample').addEventListener('click', () => addDataURL(makeSampleDataURL('normal'), 'sample.png'));
+  $('#btnSampleWm').addEventListener('click', () => addDataURL(makeSampleDataURL('wm'), 'sample-wm.png'));
+  $('#btnProcess').addEventListener('click', processAll);
+  $('#btnClear').addEventListener('click', () => { state.items.forEach(revokeItem); state.items = []; $('#gallery').innerHTML = ''; refreshEmpty(); updateBatch(); });
+  $('#btnZip').addEventListener('click', async () => {
+    try { const blob = await buildZip(); downloadBlob(blob, `whitecut-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '')}.zip`); }
+    catch (e) { toast('打包失败：' + e.message); }
+  });
+  $('#btnSettings').addEventListener('click', openSettings);
+  $('#btnSettingsClose').addEventListener('click', closeSettings);
+  $('#btnSettingsCancel').addEventListener('click', closeSettings);
+  $('#btnSettingsSave').addEventListener('click', () => {
+    settings.geminiKey = $('#sKey').value.trim();
+    settings.geminiModel = $('#sModel').value.trim() || DEFAULTS.geminiModel;
+    settings.promptCut = $('#sPromptCut').value; settings.promptWm = $('#sPromptWm').value;
+    settings.localModel = $('#sLocalModel').value;
+    saveSettings(); closeSettings(); bindEngine(); toast('设置已保存（本机）');
+  });
+  $('#sShowKey').addEventListener('click', () => {
+    const k = $('#sKey'); k.type = k.type === 'password' ? 'text' : 'password';
+  });
+  $('#btnCloseDetail').addEventListener('click', closeDetail);
+  $('#detailModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeDetail(); });
+  $('#settingsModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeSettings(); });
+  window.addEventListener('keydown', e => { if (e.key === 'Escape') { closeDetail(); closeSettings(); } });
+
+  bindParam('#pTol', '#vTol', 'tol'); bindParam('#pErode', '#vErode', 'erode');
+  bindParam('#pFeather', '#vFeather', 'feather'); bindParam('#pPure', '#vPure', 'pure');
+  bindParam('#pMargin', '#vMargin', 'margin');
+  bindCheck('#pTrim', 'trim'); bindCheck('#pSquare', 'square');
+  $('#wmStrategy').value = settings.wmStrategy;
+  $('#wmStrategy').addEventListener('change', () => { settings.wmStrategy = $('#wmStrategy').value; saveSettings(); });
+  bindEngine();
+
+  $('#btnBgToggle').addEventListener('click', () => {
+    const box = $('#dResultBox'), img = $('#dResult'), tag = $('#dResultTag');
+    const isWhite = tag.textContent.includes('白底');
+    img.src = (isWhite ? curDetail.cutThumb : curDetail.whiteThumb) || '';
+    tag.textContent = isWhite ? '结果 · 透明' : '结果 · 白底';
+    box.classList.toggle('plainbg', isWhite);
+  });
+  $('#btnDlWhite').addEventListener('click', () => curDetail && dlWhite(curDetail));
+  $('#btnDlCut').addEventListener('click', () => curDetail && dlCut(curDetail));
+  $('#btnDlJpg').addEventListener('click', () => curDetail && dlJpg(curDetail));
+  $('#btnDlOrig').addEventListener('click', () => { if (curDetail) downloadBlob(curDetail.srcBlob, curDetail.name); });
+  $('#btnRerun').addEventListener('click', async () => {
+    if (!curDetail) return;
+    curDetail.params = { ...curDetail.params, trim: $('#dTrim').checked, square: $('#dSquare').checked };
+    try {
+      $('#btnRerun').disabled = true; $('#btnRerun').textContent = '处理中…';
+      await rewhiten(curDetail, curDetail.params);
+      $('#dResult').src = curDetail.whiteThumb; $('#dResultTag').textContent = '结果 · 白底';
+      renderCard(curDetail); updateBatch(); toast('已按新参数重新白化');
+    } catch (e) { toast('失败：' + e.message); }
+    finally { $('#btnRerun').disabled = false; $('#btnRerun').textContent = '↻ 按此参数重新白化'; }
+  });
+  $('#btnDefaults').addEventListener('click', () => {
+    if (!curDetail) return;
+    Object.assign(settings, curDetail.params); saveSettings();
+    ['tol', 'erode', 'feather', 'pure', 'margin'].forEach(k => { $('#p' + k[0].toUpperCase() + k.slice(1)).value = settings[k]; });
+    $('#vTol').textContent = settings.tol; $('#vErode').textContent = settings.erode;
+    $('#vFeather').textContent = settings.feather; $('#vPure').textContent = settings.pure; $('#vMargin').textContent = settings.margin;
+    $('#pTrim').checked = settings.trim; $('#pSquare').checked = settings.square;
+    toast('已存为全局默认');
+  });
+  $('#btnWmFix').addEventListener('click', async () => { if (curDetail) await wmFix(curDetail); });
+  $('#dSvgDetail').addEventListener('input', () => { $('#dvSvgDetail').textContent = $('#dSvgDetail').value; });
+  $('#btnSvg').addEventListener('click', async () => {
+    if (!curDetail) return;
+    const btn = $('#btnSvg'); btn.disabled = true; btn.textContent = '生成中…';
+    try {
+      curDetail.svgText = await vectorizeItem(curDetail, $('#dSvgMode').value, +$('#dSvgDetail').value);
+      $('#dSvgPreview').innerHTML = curDetail.svgText;
+      $('#dSvgPreview').classList.remove('hidden'); $('#btnSvgDl').classList.remove('hidden');
+      updateBatch();
+    } catch (e) { toast('矢量化失败：' + e.message); }
+    finally { btn.disabled = false; btn.textContent = '生成 SVG'; }
+  });
+  $('#btnSvgDl').addEventListener('click', () => curDetail && dlSvg(curDetail));
+}
+init();
+
+/* ---------- 自动化/调试钩子 ---------- */
+window.WhiteCut = {
+  state, settings, saveSettings,
+  add: addDataURL, addBlobs, processAll, whiten, makeSampleDataURL,
+  buildZip, vectorizeItem,
+  version: '1.0.0',
+};
+</script>
+</body>
+</html>
